@@ -1,31 +1,63 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { createAuditLog } from "../lib/audit.js";
-import { leadCreateSchema, leadUpdateSchema, scrapeSchema, validate } from "../lib/validators.js";
+import {
+  leadCreateSchema,
+  leadUpdateSchema,
+  scrapeSchema,
+  validate,
+} from "../lib/validators.js";
 import { scrapeDirectoryLeads } from "../services/scraperService.js";
 
 const router = Router();
 
+// =====================
+// GET LEADS (FILTER + PAGINATION READY)
+// =====================
 router.get("/", async (req, res, next) => {
   try {
-    const status = req.query.status;
-    const leads = await prisma.lead.findMany({
-      where: {
-        userId: req.user.id,
-        ...(typeof status === "string" && status !== "all" ? { status } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const { status, page = 1, limit = 50 } = req.query;
 
-    return res.json(leads);
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const where = {
+      userId: req.user.id,
+      ...(typeof status === "string" && status !== "all"
+        ? { status }
+        : {}),
+    };
+
+    const [leads, total] = await Promise.all([
+      prisma.lead.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: Number(limit),
+      }),
+      prisma.lead.count({ where }),
+    ]);
+
+    return res.json({
+      data: leads,
+      pagination: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
   } catch (error) {
     return next(error);
   }
 });
 
+// =====================
+// CREATE LEAD
+// =====================
 router.post("/", async (req, res, next) => {
   try {
     const data = validate(leadCreateSchema, req.body);
+
     const lead = await prisma.lead.create({
       data: {
         userId: req.user.id,
@@ -38,20 +70,23 @@ router.post("/", async (req, res, next) => {
         status: data.status || "new",
       },
     });
-    await prisma.funnelEvent.create({
-      data: {
+
+    await Promise.all([
+      prisma.funnelEvent.create({
+        data: {
+          userId: req.user.id,
+          leadId: lead.id,
+          eventType: "lead_created",
+          source: lead.source || "manual",
+        },
+      }),
+      createAuditLog({
         userId: req.user.id,
-        leadId: lead.id,
-        eventType: "lead_created",
-        source: lead.source || "manual",
-      },
-    });
-    await createAuditLog({
-      userId: req.user.id,
-      action: "lead.created",
-      entityType: "lead",
-      entityId: lead.id,
-    });
+        action: "lead.created",
+        entityType: "lead",
+        entityId: lead.id,
+      }),
+    ]);
 
     return res.status(201).json(lead);
   } catch (error) {
@@ -59,10 +94,20 @@ router.post("/", async (req, res, next) => {
   }
 });
 
+// =====================
+// UPDATE LEAD
+// =====================
 router.patch("/:id", async (req, res, next) => {
   try {
     const data = validate(leadUpdateSchema, req.body);
-    const existing = await prisma.lead.findFirst({ where: { id: req.params.id, userId: req.user.id } });
+
+    const existing = await prisma.lead.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.id,
+      },
+    });
+
     if (!existing) {
       return res.status(404).json({ error: "Lead not found" });
     }
@@ -75,6 +120,7 @@ router.patch("/:id", async (req, res, next) => {
         email: data.email === "" ? null : data.email,
       },
     });
+
     await createAuditLog({
       userId: req.user.id,
       action: "lead.updated",
@@ -88,46 +134,82 @@ router.patch("/:id", async (req, res, next) => {
   }
 });
 
+// =====================
+// DELETE LEAD
+// =====================
 router.delete("/:id", async (req, res, next) => {
   try {
-    const existing = await prisma.lead.findFirst({ where: { id: req.params.id, userId: req.user.id } });
+    const existing = await prisma.lead.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.id,
+      },
+    });
+
     if (!existing) {
       return res.status(404).json({ error: "Lead not found" });
     }
 
-    await prisma.lead.delete({ where: { id: req.params.id } });
+    await prisma.lead.delete({
+      where: { id: req.params.id },
+    });
+
     await createAuditLog({
       userId: req.user.id,
       action: "lead.deleted",
       entityType: "lead",
       entityId: req.params.id,
     });
+
     return res.status(204).send();
   } catch (error) {
     return next(error);
   }
 });
 
+// =====================
+// BULK DELETE
+// =====================
 router.post("/bulk-delete", async (req, res, next) => {
   try {
     const ids = Array.isArray(req.body.ids) ? req.body.ids : [];
-    await prisma.lead.deleteMany({ where: { userId: req.user.id, id: { in: ids } } });
+
+    if (!ids.length) {
+      return res.status(400).json({ error: "No IDs provided" });
+    }
+
+    const result = await prisma.lead.deleteMany({
+      where: {
+        userId: req.user.id,
+        id: { in: ids },
+      },
+    });
+
     await createAuditLog({
       userId: req.user.id,
       action: "lead.bulk_deleted",
       entityType: "lead",
-      metadata: { count: ids.length },
+      metadata: { count: result.count },
     });
-    return res.status(204).send();
+
+    return res.json({ deleted: result.count });
   } catch (error) {
     return next(error);
   }
 });
 
+// =====================
+// SCRAPE LEADS (HIGH VALUE FEATURE)
+// =====================
 router.post("/scrape", async (req, res, next) => {
   try {
     const input = validate(scrapeSchema, req.body);
+
     const scraped = await scrapeDirectoryLeads(input);
+
+    if (!scraped.length) {
+      return res.status(200).json({ added: 0, leads: [] });
+    }
 
     const created = await prisma.$transaction(
       scraped.map((item) =>
@@ -136,8 +218,8 @@ router.post("/scrape", async (req, res, next) => {
             userId: req.user.id,
             name: item.name,
             company: item.company,
-            website: item.website,
-            email: item.email,
+            website: item.website || null,
+            email: item.email || null,
             location: input.location,
             source: "directory-scrape",
           },
@@ -145,33 +227,42 @@ router.post("/scrape", async (req, res, next) => {
       )
     );
 
-    if (created.length) {
-      await prisma.funnelEvent.createMany({
+    await Promise.all([
+      prisma.funnelEvent.createMany({
         data: created.map((lead) => ({
           userId: req.user.id,
           leadId: lead.id,
           eventType: "lead_created",
           source: "directory-scrape",
         })),
-      });
-    }
-    await prisma.usageRecord.create({
-      data: {
-        userId: req.user.id,
-        metric: "leads_scraped",
-        quantity: created.length,
-        amountCents: created.length * 20,
-        periodKey: new Date().toISOString().slice(0, 7),
-      },
-    });
-    await createAuditLog({
-      userId: req.user.id,
-      action: "lead.scraped",
-      entityType: "lead",
-      metadata: { keyword: input.keyword, location: input.location, added: created.length },
-    });
+      }),
 
-    return res.status(201).json({ added: created.length, leads: created });
+      prisma.usageRecord.create({
+        data: {
+          userId: req.user.id,
+          metric: "leads_scraped",
+          quantity: created.length,
+          amountCents: created.length * 20,
+          periodKey: new Date().toISOString().slice(0, 7),
+        },
+      }),
+
+      createAuditLog({
+        userId: req.user.id,
+        action: "lead.scraped",
+        entityType: "lead",
+        metadata: {
+          keyword: input.keyword,
+          location: input.location,
+          added: created.length,
+        },
+      }),
+    ]);
+
+    return res.status(201).json({
+      added: created.length,
+      leads: created,
+    });
   } catch (error) {
     return next(error);
   }
