@@ -1,6 +1,5 @@
 import { Router } from "express";
 import * as otplib from "otplib";
-const authenticator = otplib.authenticator;
 import { Plan, UserRole } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { authenticator } from "otplib";
