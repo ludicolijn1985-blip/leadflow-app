@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticator } from "otplib/authenticator";
+import { authenticator } from "otplib";
 import { Plan, UserRole } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import {
