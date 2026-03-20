@@ -1,22 +1,13 @@
 export const config = {
-  // environment
-  nodeEnv: process.env.NODE_ENV || "development",
+  nodeEnv: process.env.NODE_ENV ?? "development",
 
-  // server
-  port: Number(process.env.PORT || 8080),
+  frontendUrl: process.env.FRONTEND_URL ?? "",
 
-  // frontend (CORS)
-  frontendUrl: process.env.FRONTEND_URL || "",
+  jwtSecret: process.env.JWT_SECRET ?? "change-this-in-production",
 
-  // security
-  jwtSecret: process.env.JWT_SECRET || "change-this-in-production",
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "15m",
 
-  // database (Prisma gebruikt deze direct, maar handig fallback)
-  databaseUrl: process.env.DATABASE_URL || "",
+  databaseUrl: process.env.DATABASE_URL ?? "",
 
-  // optional app URL (voor emails / links / redirects)
-  appUrl: process.env.APP_URL || "",
-
-  // flags
-  isProduction: process.env.NODE_ENV === "production",
+  appUrl: process.env.APP_URL ?? "",
 };
