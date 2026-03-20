@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticator } from "otplib";
+import { verify } from "otplib";
 import { Plan, UserRole } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import {
@@ -187,10 +187,11 @@ router.post("/login/2fa", async (req, res, next) => {
 
     // TOTP
     if (input.token) {
-      valid = authenticator.verify({
+      const result = await verify({
         token: input.token,
         secret: user.twoFactorSecret,
       });
+      valid = result.valid;
     }
 
     // Recovery code
