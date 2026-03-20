@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { authenticator } from "otplib";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config.js";
 import { renderTemplate, sendLeadEmail } from "./mailService.js";
