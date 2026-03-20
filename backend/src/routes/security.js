@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticator } from "otplib";
+import { generateSecret, keyuri, verify } from "otplib";
 import QRCode from "qrcode";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config.js";
@@ -10,8 +10,8 @@ const router = Router();
 
 router.get("/2fa/setup", async (req, res, next) => {
   try {
-    const secret = authenticator.generateSecret();
-    const otpauth = authenticator.keyuri(req.user.email, config.totpIssuer, secret);
+    const secret = generateSecret();
+    const otpauth = keyuri(req.user.email, config.totpIssuer, secret);
     const qrDataUrl = await QRCode.toDataURL(otpauth);
     await prisma.user.update({
       where: { id: req.user.id },
@@ -37,7 +37,8 @@ router.post("/2fa/enable", async (req, res, next) => {
       return res.status(400).json({ error: "2FA setup not initialized" });
     }
 
-    const isValid = authenticator.verify({ token: input.token, secret: user.twoFactorSecret });
+    const result = await verify({ token: input.token, secret: user.twoFactorSecret });
+    const isValid = result.valid;
     if (!isValid) {
       return res.status(400).json({ error: "Invalid 2FA token" });
     }
@@ -67,7 +68,8 @@ router.post("/2fa/disable", async (req, res, next) => {
       return res.status(400).json({ error: "2FA is not enabled" });
     }
 
-    const isValid = authenticator.verify({ token: input.token, secret: user.twoFactorSecret });
+    const result = await verify({ token: input.token, secret: user.twoFactorSecret });
+    const isValid = result.valid;
     if (!isValid) {
       return res.status(400).json({ error: "Invalid 2FA token" });
     }
