@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "prisma db push && node server.js",
-    "postinstall": "prisma generate"
+    "start": "npx prisma db push && node server.js",
+    "postinstall": "npx prisma generate"
   }
 }
