@@ -4,7 +4,15 @@ import { execSync } from "child_process";
 try {
   console.log("🚀 Running Prisma DB Push...");
   execSync(
-    "npx prisma db push --schema=backend/prisma/schema.prisma",
+    import { execSync } from "child_process";
+
+try {
+  console.log("🚀 Running Prisma DB Push...");
+  execSync("npx prisma db push", { stdio: "inherit" });
+  console.log("✅ Prisma DB synced");
+} catch (e) {
+  console.error("❌ Prisma push failed:", e.message);
+}
     { stdio: "inherit" }
   );
   console.log("✅ Prisma DB synced");
