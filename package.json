@@ -7,11 +7,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "start": "npx prisma db push && node backend/server.js"
-  },
+  "start": "npx prisma db push && node backend/server.js",
+  "postinstall": "npx prisma generate"
+}
   "dependencies": {
     "@mollie/api-client": "^4.4.0",
     "@prisma/client": "5.22.0",
