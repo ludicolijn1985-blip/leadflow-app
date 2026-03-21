@@ -2,8 +2,11 @@
   "name": "leadflow-pro-backend",
   "private": true,
   "type": "module",
-  "scripts": {
-    "start": "npx prisma db push && node server.js",
-    "postinstall": "npx prisma generate"
+    "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "npx prisma db push --schema=backend/prisma/schema.prisma && node backend/server.js",
+    "postinstall": "npx prisma generate --schema=backend/prisma/schema.prisma"
   }
 }
