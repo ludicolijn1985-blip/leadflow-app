@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { generateSecret, keyuri, verify } from "otplib";
+import otplib from "otplib";
+const { generateSecret, keyuri, verify } = otplib;
 import QRCode from "qrcode";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config.js";

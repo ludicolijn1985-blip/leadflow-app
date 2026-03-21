@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { verify } from "otplib";
+import otplib from "otplib";
+const { verify } = otplib;
 import { Plan, UserRole } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import {
