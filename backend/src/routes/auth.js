@@ -60,10 +60,16 @@ router.post("/register", async (req, res, next) => {
       return res.status(409).json({ error: "Email already in use" });
     }
 
-    const mollieCustomerId = await createMollieCustomer({
-      name: input.name,
-      email: input.email,
-    });
+    // 🔥 FAIL-SAFE MOLLIE
+    let mollieCustomerId = null;
+    try {
+      mollieCustomerId = await createMollieCustomer({
+        name: input.name,
+        email: input.email,
+      });
+    } catch (err) {
+      console.error("Mollie error:", err.message);
+    }
 
     const user = await prisma.user.create({
       data: {
@@ -144,9 +150,13 @@ router.post("/login", async (req, res, next) => {
       });
     }
 
-    // demo auto data
+    // 🔥 FAIL-SAFE DEMO DATA
     if (user.email === "demo@leadflow.ai") {
-      await ensureDemoData(user.id);
+      try {
+        await ensureDemoData(user.id);
+      } catch (err) {
+        console.error("Demo data error:", err.message);
+      }
     }
 
     await createAuditLog({
@@ -186,7 +196,6 @@ router.post("/login/2fa", async (req, res, next) => {
     let valid = false;
     let consumedRecoveryCode = null;
 
-    // TOTP
     if (input.token) {
       const result = await verify({
         token: input.token,
@@ -195,7 +204,6 @@ router.post("/login/2fa", async (req, res, next) => {
       valid = result.valid;
     }
 
-    // Recovery code
     if (!valid && input.recoveryCode) {
       const codes = Array.isArray(user.twoFactorRecoveryCodes)
         ? user.twoFactorRecoveryCodes
@@ -230,7 +238,11 @@ router.post("/login/2fa", async (req, res, next) => {
     }
 
     if (user.email === "demo@leadflow.ai") {
-      await ensureDemoData(user.id);
+      try {
+        await ensureDemoData(user.id);
+      } catch (err) {
+        console.error("Demo data error:", err.message);
+      }
     }
 
     await createAuditLog({
@@ -274,7 +286,12 @@ router.post("/demo", async (_req, res, next) => {
       });
     }
 
-    await ensureDemoData(user.id);
+    // 🔥 FAIL-SAFE DEMO DATA
+    try {
+      await ensureDemoData(user.id);
+    } catch (err) {
+      console.error("Demo data error:", err.message);
+    }
 
     return res.json(issueSession(user));
   } catch (error) {
