@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "npx prisma db push --schema=backend/prisma/schema.prisma && node backend/server.js",
-    "postinstall": "npx prisma generate --schema=backend/prisma/schema.prisma"
+    "start": "npx prisma db push && node server.js",
+    "postinstall": "npx prisma generate"
   }
 }
