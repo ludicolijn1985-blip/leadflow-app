@@ -7,8 +7,8 @@
     "node": ">=22"
   },
   "scripts": {
-  "start": "npx prisma@5.22.0 migrate deploy && node backend/server.js",
-  "postinstall": "npx prisma@5.22.0 generate"
+    "start": "./node_modules/.bin/prisma db push && node backend/server.js",
+    "postinstall": "./node_modules/.bin/prisma generate"
 },
   "dependencies": {
     "@mollie/api-client": "^4.4.0",
