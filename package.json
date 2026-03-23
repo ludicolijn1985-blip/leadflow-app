@@ -7,8 +7,11 @@
     "node": ">=22"
   },
   "scripts": {
-    "start": "./node_modules/.bin/prisma db push && node backend/server.js",
-    "postinstall": "./node_modules/.bin/prisma generate"
+  "dev": "vite",
+  "build": "vite build",
+  "preview": "vite preview",
+  "start": "node_modules/.bin/prisma db push && node backend/server.js",
+  "postinstall": "node_modules/.bin/prisma generate"
 },
   "dependencies": {
     "@mollie/api-client": "^4.4.0",
