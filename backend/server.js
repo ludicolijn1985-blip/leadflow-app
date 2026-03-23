@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
 
-// 🔥 FORCE PRISMA (zonder npx → dus geen Prisma 7 probleem)
+// 🔥 Prisma setup
 try {
   console.log("🚀 Generating Prisma Client...");
   execSync("./node_modules/.bin/prisma generate", { stdio: "inherit" });
@@ -18,39 +18,37 @@ import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
-// CONFIG + LIBS
-import { config } from "./src/config.js";
-import { httpLogger } from "./src/lib/logger.js";
-import { prisma } from "./src/lib/prisma.js";
+// ✅ FIXED PATHS (GEEN src/)
+import { config } from "./config.js";
+import { httpLogger } from "./lib/logger.js";
+import { prisma } from "./lib/prisma.js";
 
 // ROUTES
-import authRoutes from "./src/routes/auth.js";
-import leadsRoutes from "./src/routes/leads.js";
-import campaignsRoutes from "./src/routes/campaigns.js";
-import dashboardRoutes from "./src/routes/dashboard.js";
-import adminRoutes from "./src/routes/admin.js";
-import billingRoutes from "./src/routes/billing.js";
-import trackingRoutes from "./src/routes/tracking.js";
-import inboxRoutes from "./src/routes/inbox.js";
-import integrationsRoutes from "./src/routes/integrations.js";
-import analyticsRoutes from "./src/routes/analytics.js";
-import securityRoutes from "./src/routes/security.js";
+import authRoutes from "./routes/auth.js";
+import leadsRoutes from "./routes/leads.js";
+import campaignsRoutes from "./routes/campaigns.js";
+import dashboardRoutes from "./routes/dashboard.js";
+import adminRoutes from "./routes/admin.js";
+import billingRoutes from "./routes/billing.js";
+import trackingRoutes from "./routes/tracking.js";
+import inboxRoutes from "./routes/inbox.js";
+import integrationsRoutes from "./routes/integrations.js";
+import analyticsRoutes from "./routes/analytics.js";
+import securityRoutes from "./routes/security.js";
 
 // MIDDLEWARE
-import { requireAuth, requireRole } from "./src/middleware/auth.js";
+import { requireAuth, requireRole } from "./middleware/auth.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
 
 app.set("trust proxy", 1);
 
-// SECURITY + BASIC MIDDLEWARE
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(cors());
 app.use(httpLogger);
 app.use(express.json());
 
-// RATE LIMIT
 app.use(
   rateLimit({
     windowMs: 60 * 1000,
@@ -58,7 +56,7 @@ app.use(
   })
 );
 
-// HEALTHCHECK
+// ✅ HEALTHCHECK
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
@@ -80,7 +78,6 @@ app.use("/api/integrations", requireAuth, integrationsRoutes);
 app.use("/api/analytics", requireAuth, analyticsRoutes);
 app.use("/api/security", requireAuth, securityRoutes);
 
-// START SERVER
 app.listen(PORT, () => {
   console.log(`🚀 Server running on ${PORT}`);
 });
