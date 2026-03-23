@@ -1,0 +1,85 @@
+import { execSync } from "child_process";
+
+// 🔥 Prisma setup (VEILIG)
+try {
+  console.log("🚀 Running Prisma setup...");
+
+  execSync("npx prisma generate", { stdio: "inherit" });
+  execSync("npx prisma db push", { stdio: "inherit" });
+
+  console.log("✅ Prisma ready");
+} catch (e) {
+  console.error("❌ Prisma error:", e.message);
+}
+
+import cors from "cors";
+import express from "express";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+
+// CONFIG + LIBS
+import { config } from "./config.js";
+import { httpLogger } from "./lib/logger.js";
+import { prisma } from "./lib/prisma.js";
+
+// ROUTES
+import authRoutes from "./routes/auth.js";
+import leadsRoutes from "./routes/leads.js";
+import campaignsRoutes from "./routes/campaigns.js";
+import dashboardRoutes from "./routes/dashboard.js";
+import adminRoutes from "./routes/admin.js";
+import billingRoutes from "./routes/billing.js";
+import trackingRoutes from "./routes/tracking.js";
+import inboxRoutes from "./routes/inbox.js";
+import integrationsRoutes from "./routes/integrations.js";
+import analyticsRoutes from "./routes/analytics.js";
+import securityRoutes from "./routes/security.js";
+
+// MIDDLEWARE
+import { requireAuth, requireRole } from "./middleware/auth.js";
+
+const app = express();
+const PORT = Number(process.env.PORT || 8080);
+
+app.set("trust proxy", 1);
+
+// SECURITY
+app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(cors());
+app.use(httpLogger);
+app.use(express.json());
+
+// RATE LIMIT
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+  })
+);
+
+// HEALTHCHECK (HEEL BELANGRIJK)
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+app.get("/", (_req, res) => {
+  res.send("API running 🚀");
+});
+
+// ROUTES
+app.use("/api/auth", authRoutes);
+app.use("/api/leads", requireAuth, leadsRoutes);
+app.use("/api/campaigns", requireAuth, campaignsRoutes);
+app.use("/api/dashboard", requireAuth, dashboardRoutes);
+app.use("/api/admin", requireAuth, requireRole("admin"), adminRoutes);
+app.use("/api/billing", requireAuth, billingRoutes);
+app.use("/api/tracking", trackingRoutes);
+app.use("/api/inbox", requireAuth, inboxRoutes);
+app.use("/api/integrations", requireAuth, integrationsRoutes);
+app.use("/api/analytics", requireAuth, analyticsRoutes);
+app.use("/api/security", requireAuth, securityRoutes);
+
+// START SERVER
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on ${PORT}`);
+});
