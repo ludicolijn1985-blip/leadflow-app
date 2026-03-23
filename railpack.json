@@ -1,0 +1,8 @@
+{
+  "build": {
+    "cmd": "npm install && node_modules/.bin/prisma generate"
+  },
+  "start": {
+    "cmd": "node_modules/.bin/prisma db push && node src/server.js"
+  }
+}

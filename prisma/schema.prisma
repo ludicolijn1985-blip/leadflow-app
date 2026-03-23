@@ -1,0 +1,312 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum Plan {
+  starter
+  pro
+  agency
+}
+
+enum LeadStatus {
+  new
+  contacted
+  replied
+}
+
+enum EmailStatus {
+  sent
+  opened
+  replied
+}
+
+enum SubscriptionStatus {
+  pending
+  active
+  canceled
+}
+
+enum IntegrationProvider {
+  hubspot
+  pipedrive
+  salesforce
+}
+
+enum FunnelEventType {
+  lead_created
+  email_sent
+  email_opened
+  reply_received
+  campaign_launched
+  deal_won
+}
+
+enum DunningStatus {
+  scheduled
+  sent
+  resolved
+  failed
+}
+
+model User {
+  id             String         @id @default(cuid())
+  name           String
+  email          String         @unique
+  passwordHash   String
+  role           UserRole       @default(user)
+  plan           Plan           @default(starter)
+  mollieCustomerId String?      @unique
+  dealValue      Int            @default(1500)
+  twoFactorEnabled Boolean      @default(false)
+  twoFactorSecret String?
+  twoFactorRecoveryCodes Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  leads          Lead[]
+  campaigns      Campaign[]
+  emailLogs      EmailLog[]
+  subscriptions  Subscription[]
+  mailboxConnections MailboxConnection[]
+  crmConnections CRMConnection[]
+  funnelEvents   FunnelEvent[]
+  usageRecords   UsageRecord[]
+  auditLogs      AuditLog[]
+}
+
+model Lead {
+  id          String      @id @default(cuid())
+  userId      String
+  name        String
+  company     String
+  website     String?
+  email       String?
+  location    String?
+  source      String?
+  status      LeadStatus  @default(new)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignLeads CampaignLead[]
+
+  // 🔥 CRUCIALE FIX (MOET ERIN)
+  emailLogs   EmailLog[]
+
+  @@index([userId, status])
+}
+
+model Campaign {
+  id            String         @id @default(cuid())
+  userId        String
+  name          String
+  subject       String
+  bodyTemplate  String
+  status        String         @default("draft")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignLeads CampaignLead[]
+  emailLogs     EmailLog[]
+  variants      CampaignVariant[]
+  steps         CampaignStep[]
+}
+
+model CampaignLead {
+  campaignId String
+  leadId     String
+  createdAt  DateTime @default(now())
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, leadId])
+}
+
+model EmailLog {
+  id          String      @id @default(cuid())
+  userId      String
+  campaignId  String
+  leadId      String
+  variantId   String?
+  toEmail     String
+  subject     String
+  body        String
+  status      EmailStatus @default(sent)
+  sentAt      DateTime    @default(now())
+  openedAt    DateTime?
+  repliedAt   DateTime?
+  trackingId  String      @unique
+  providerId  String?
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign    Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead        Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+model Subscription {
+  id                String             @id @default(cuid())
+  userId            String
+  plan              Plan
+  amountCents       Int
+  currency          String             @default("EUR")
+  molliePaymentId   String             @unique
+  mollieCustomerId  String
+  checkoutUrl       String
+  status            SubscriptionStatus @default(pending)
+  paidAt            DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usageRecords      UsageRecord[]
+  dunningEvents     DunningEvent[]
+
+  @@index([userId, status])
+}
+
+model MailboxConnection {
+  id              String   @id @default(cuid())
+  userId          String
+  host            String
+  port            Int
+  secure          Boolean  @default(true)
+  username        String
+  password        String
+  lastSyncedAt    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, username])
+  @@index([userId])
+}
+
+model CampaignVariant {
+  id          String   @id @default(cuid())
+  campaignId  String
+  label       String
+  subject     String
+  bodyTemplate String
+  trafficPercent Int  @default(50)
+  sentCount   Int      @default(0)
+  openCount   Int      @default(0)
+  replyCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+model CampaignStep {
+  id          String   @id @default(cuid())
+  campaignId  String
+  nodeId      String
+  stepType    String
+  delayHours  Int      @default(0)
+  config      Json
+  positionX   Float    @default(0)
+  positionY   Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, nodeId])
+  @@index([campaignId])
+}
+
+model CRMConnection {
+  id           String              @id @default(cuid())
+  userId       String
+  provider     IntegrationProvider
+  accessToken  String
+  refreshToken String?
+  endpointUrl  String?
+  active       Boolean             @default(true)
+  lastSyncAt   DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+}
+
+model FunnelEvent {
+  id          String          @id @default(cuid())
+  userId      String
+  campaignId  String?
+  leadId      String?
+  eventType   FunnelEventType
+  source      String?
+  valueCents  Int?
+  createdAt   DateTime        @default(now())
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, eventType, createdAt])
+}
+
+model UsageRecord {
+  id             String   @id @default(cuid())
+  userId         String
+  subscriptionId String?
+  metric         String
+  quantity       Int
+  amountCents    Int
+  periodKey      String
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, periodKey])
+}
+
+model DunningEvent {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  attemptNumber  Int
+  status         DunningStatus
+  message        String?
+  scheduledFor   DateTime
+  processedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, status])
+}
+
+model JobLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  jobType     String
+  status      String
+  payload     Json?
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([jobType, status, createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+}
