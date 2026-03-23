@@ -1,18 +1,17 @@
 {
-  "name": "react-vite-tailwind",
+  "name": "leadflow-pro",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "preview": "vite preview",
-  "start": "node_modules/.bin/prisma db push && node src/server.js"
-  "postinstall": "node_modules/.bin/prisma generate"
-},
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node src/server.js"
+  },
   "dependencies": {
     "@mollie/api-client": "^4.4.0",
     "@prisma/client": "5.22.0",
@@ -24,7 +23,6 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
-    "framer-motion": "^12.38.0",
     "helmet": "^8.1.0",
     "imapflow": "^1.2.16",
     "ioredis": "^5.10.1",
