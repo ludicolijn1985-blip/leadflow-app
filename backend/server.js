@@ -1,23 +1,16 @@
 import { execSync } from "child_process";
 
-// 🔥 FORCE PRISMA SYNC BIJ STARTUP
+// 🔥 FORCE PRISMA (zonder npx → dus geen Prisma 7 probleem)
 try {
-  console.log("🚀 Running Prisma DB Push...");
-  execSync(
-    import { execSync } from "child_process";
+  console.log("🚀 Generating Prisma Client...");
+  execSync("./node_modules/.bin/prisma generate", { stdio: "inherit" });
 
-try {
   console.log("🚀 Running Prisma DB Push...");
-  execSync("npx prisma db push", { stdio: "inherit" });
-  console.log("✅ Prisma DB synced");
+  execSync("./node_modules/.bin/prisma db push", { stdio: "inherit" });
+
+  console.log("✅ Prisma ready");
 } catch (e) {
-  console.error("❌ Prisma push failed:", e.message);
-}
-    { stdio: "inherit" }
-  );
-  console.log("✅ Prisma DB synced");
-} catch (e) {
-  console.error("❌ Prisma push failed:", e.message);
+  console.error("❌ Prisma error:", e.message);
 }
 
 import cors from "cors";
@@ -57,7 +50,7 @@ app.use(cors());
 app.use(httpLogger);
 app.use(express.json());
 
-// (optioneel) rate limit
+// RATE LIMIT
 app.use(
   rateLimit({
     windowMs: 60 * 1000,
@@ -65,7 +58,7 @@ app.use(
   })
 );
 
-// ✅ HEALTHCHECK
+// HEALTHCHECK
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
@@ -74,9 +67,7 @@ app.get("/", (_req, res) => {
   res.send("API running 🚀");
 });
 
-// =====================
 // ROUTES
-// =====================
 app.use("/api/auth", authRoutes);
 app.use("/api/leads", requireAuth, leadsRoutes);
 app.use("/api/campaigns", requireAuth, campaignsRoutes);
@@ -89,9 +80,7 @@ app.use("/api/integrations", requireAuth, integrationsRoutes);
 app.use("/api/analytics", requireAuth, analyticsRoutes);
 app.use("/api/security", requireAuth, securityRoutes);
 
-// =====================
 // START SERVER
-// =====================
 app.listen(PORT, () => {
   console.log(`🚀 Server running on ${PORT}`);
 });
