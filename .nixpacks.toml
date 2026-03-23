@@ -1,5 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs"]
+
+[phases.install]
+cmds = ["npm install"]
+
 [phases.build]
-cmd = "npm install && node_modules/.bin/prisma generate"
+cmds = ["echo Skipping default build"]
 
 [start]
-cmd = "node_modules/.bin/prisma db push && node src/server.js"
+cmd = "node backend/server.js"

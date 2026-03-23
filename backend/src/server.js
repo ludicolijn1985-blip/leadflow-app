@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
 
-// 🔥 Prisma setup (zonder npx → voorkomt Prisma v7 bugs)
+// 🔥 Prisma setup
 try {
   console.log("🚀 Generating Prisma Client...");
   execSync("./node_modules/.bin/prisma generate", { stdio: "inherit" });
@@ -18,23 +18,26 @@ import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
-import { config } from "./src/config.js";
-import { httpLogger } from "./src/lib/logger.js";
-import { prisma } from "./src/lib/prisma.js";
+// ✅ FIXED PATHS (GEEN src/)
+import { config } from "./config.js";
+import { httpLogger } from "./lib/logger.js";
+import { prisma } from "./lib/prisma.js";
 
-import authRoutes from "./src/routes/auth.js";
-import leadsRoutes from "./src/routes/leads.js";
-import campaignsRoutes from "./src/routes/campaigns.js";
-import dashboardRoutes from "./src/routes/dashboard.js";
-import adminRoutes from "./src/routes/admin.js";
-import billingRoutes from "./src/routes/billing.js";
-import trackingRoutes from "./src/routes/tracking.js";
-import inboxRoutes from "./src/routes/inbox.js";
-import integrationsRoutes from "./src/routes/integrations.js";
-import analyticsRoutes from "./src/routes/analytics.js";
-import securityRoutes from "./src/routes/security.js";
+// ROUTES
+import authRoutes from "./routes/auth.js";
+import leadsRoutes from "./routes/leads.js";
+import campaignsRoutes from "./routes/campaigns.js";
+import dashboardRoutes from "./routes/dashboard.js";
+import adminRoutes from "./routes/admin.js";
+import billingRoutes from "./routes/billing.js";
+import trackingRoutes from "./routes/tracking.js";
+import inboxRoutes from "./routes/inbox.js";
+import integrationsRoutes from "./routes/integrations.js";
+import analyticsRoutes from "./routes/analytics.js";
+import securityRoutes from "./routes/security.js";
 
-import { requireAuth, requireRole } from "./src/middleware/auth.js";
+// MIDDLEWARE
+import { requireAuth, requireRole } from "./middleware/auth.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
@@ -49,18 +52,20 @@ app.use(express.json());
 app.use(
   rateLimit({
     windowMs: 60 * 1000,
-    max: 100
+    max: 100,
   })
 );
 
+// ✅ HEALTHCHECK
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.status(200).json({ status: "ok" });
 });
 
 app.get("/", (_req, res) => {
   res.send("API running 🚀");
 });
 
+// ROUTES
 app.use("/api/auth", authRoutes);
 app.use("/api/leads", requireAuth, leadsRoutes);
 app.use("/api/campaigns", requireAuth, campaignsRoutes);
