@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node src/server.js"
+    "start": "node backend/server.js"
   },
   "dependencies": {
     "@mollie/api-client": "^4.4.0",
