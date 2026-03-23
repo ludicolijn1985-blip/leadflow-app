@@ -10,7 +10,7 @@
   "dev": "vite",
   "build": "vite build",
   "preview": "vite preview",
-  "start": "node_modules/.bin/prisma db push && node backend/server.js",
+  "start": "node_modules/.bin/prisma db push && node src/server.js"
   "postinstall": "node_modules/.bin/prisma generate"
 },
   "dependencies": {
