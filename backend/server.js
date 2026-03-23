@@ -1,12 +1,11 @@
 import { execSync } from "child_process";
 
-// 🔥 Prisma setup
+// 🔥 Prisma setup (VEILIG)
 try {
-  console.log("🚀 Generating Prisma Client...");
-  execSync("./node_modules/.bin/prisma generate", { stdio: "inherit" });
+  console.log("🚀 Running Prisma setup...");
 
-  console.log("🚀 Running Prisma DB Push...");
-  execSync("./node_modules/.bin/prisma db push", { stdio: "inherit" });
+  execSync("npx prisma generate", { stdio: "inherit" });
+  execSync("npx prisma db push", { stdio: "inherit" });
 
   console.log("✅ Prisma ready");
 } catch (e) {
@@ -18,7 +17,7 @@ import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
-// ✅ FIXED PATHS (GEEN src/)
+// CONFIG + LIBS
 import { config } from "./config.js";
 import { httpLogger } from "./lib/logger.js";
 import { prisma } from "./lib/prisma.js";
@@ -44,11 +43,13 @@ const PORT = Number(process.env.PORT || 8080);
 
 app.set("trust proxy", 1);
 
+// SECURITY
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(cors());
 app.use(httpLogger);
 app.use(express.json());
 
+// RATE LIMIT
 app.use(
   rateLimit({
     windowMs: 60 * 1000,
@@ -56,7 +57,7 @@ app.use(
   })
 );
 
-// ✅ HEALTHCHECK
+// HEALTHCHECK (HEEL BELANGRIJK)
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
@@ -78,6 +79,7 @@ app.use("/api/integrations", requireAuth, integrationsRoutes);
 app.use("/api/analytics", requireAuth, analyticsRoutes);
 app.use("/api/security", requireAuth, securityRoutes);
 
+// START SERVER
 app.listen(PORT, () => {
   console.log(`🚀 Server running on ${PORT}`);
 });
